@@ -32,13 +32,28 @@ export function card(p) {
   const hasNotesFlag = p.hasMeetingNotes;
   
   // Thumbnail logic: check for .jpg matching project name (kebab-case)
-  const thumbName = p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  const thumbUrl = `./thumbnails/${thumbName}.jpg`;
+  // Logic: 
+  // 1. Try exact kebab-case match (e.g. slb-project-neo-manara-xrayvue-curved-screen.jpg)
+  // 2. Fallback to start-of-name match (e.g. slb-project-neo.jpg)
+  // 3. Fallback to Unsplash feature (fast, dynamic)
+  // 4. Final fallback to placeholder.jpg
+  
+  const kebabName = p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const prefixName = kebabName.split('-').slice(0, 3).join('-'); // e.g. "slb-project-neo"
+  
+  const localThumb = `./thumbnails/${kebabName}.jpg`;
+  const prefixThumb = `./thumbnails/${prefixName}.jpg`;
+  
+  // Clean name for Unsplash search keywords
+  const searchKeywords = p.name.replace(/[^a-zA-Z\s]/g, '').split(' ').slice(0, 3).join(',');
+  const unsplashUrl = `https://images.unsplash.com/featured/?exhibit,museum,${searchKeywords}`;
 
   return `
     <div class="card" onclick="this.classList.toggle('expanded')">
       ${hasNotesFlag ? `<a href="notes.html?project=${encodeURIComponent(p.name)}" class="badge badge-notes" onclick="event.stopPropagation()">NOTES</a>` : ''}
-      <img src="${thumbUrl}" class="card-image" onerror="this.src='./thumbnails/placeholder.jpg'; this.onerror=null;">
+      <img src="${localThumb}" 
+           class="card-image" 
+           onerror="if(this.src.includes('${kebabName}')){this.src='${prefixThumb}'} else if(this.src.includes('${prefixName}')){this.src='${unsplashUrl}'} else {this.src='./thumbnails/placeholder.jpg'; this.onerror=null;}">
       <div class="card-top">
         <span class="card-name">${p.name}</span>
         ${badge(p.status)}
