@@ -10,14 +10,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
  */
 function toKebab(str) {
   return str.toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .trim();
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 async function sync() {
-  console.log('🔍 Starting Thumbnail Sync Check...\n');
+  console.log('🔍 Starting Persistent Thumbnail Sync Check...\n');
 
   // 1. Get projects from Supabase
   const res = await fetch(`${SUPABASE_URL}/rest/v1/projects?select=name`, {
@@ -28,36 +26,61 @@ async function sync() {
   // 2. Get local files
   const localFiles = fs.readdirSync(THUMB_DIR).filter(f => f.endsWith('.jpg') || f.endsWith('.png'));
   
-  const expectedNames = projects.map(p => ({
-    original: p.name,
-    kebab: toKebab(p.name) + '.jpg'
-  }));
+  const expectedNames = projects.map(p => {
+    const kebab = toKebab(p.name);
+    return {
+      original: p.name,
+      kebab: kebab + '.jpg',
+      prefix: kebab.split('-').slice(0, 3).join('-') + '.jpg'
+    };
+  });
 
-  console.log('--- STATUS REPORT ---');
+  console.log('--- STATUS REPORT & PROTECTION CHECK ---');
   let missing = 0;
+  const foundMap = new Map();
+
   expectedNames.forEach(p => {
-    if (!localFiles.includes(p.kebab)) {
-      console.log(`❌ MISSING: [${p.original}]`);
-      console.log(`   Expected: ${p.kebab}`);
-      missing++;
+    let status = '❌ MISSING';
+    let detail = `Expected: ${p.kebab}`;
+    
+    if (localFiles.includes(p.kebab)) {
+      status = '✅ PROTECTED (Exact)';
+      detail = `Using: ${p.kebab}`;
+      foundMap.set(p.kebab, (foundMap.get(p.kebab) || 0) + 1);
+    } else if (localFiles.includes(p.prefix)) {
+      status = '✅ PROTECTED (Prefix)';
+      detail = `Using: ${p.prefix}`;
+      foundMap.set(p.prefix, (foundMap.get(p.prefix) || 0) + 1);
     } else {
-      console.log(`✅ FOUND:   ${p.kebab}`);
+      missing++;
+    }
+    
+    console.log(`${status.padEnd(25)} | [${p.original}]`);
+    console.log(`   ${detail}`);
+  });
+
+  // Consistency Check: Report shared images
+  console.log('\n--- CONSISTENCY CHECK ---');
+  foundMap.forEach((count, file) => {
+    if (count > 1) {
+      console.log(`🔗 SHARED: ${file} is being correctly used by ${count} project listings.`);
     }
   });
 
-  // Check for orphans
+  // Orphan Check (Assets not linked to any project)
   console.log('\n--- ORPHAN CHECK ---');
-  const expectedArray = expectedNames.map(e => e.kebab);
   localFiles.forEach(f => {
-    if (f !== 'placeholder.jpg' && !expectedArray.includes(f)) {
-      console.log(`⚠️ ORPHAN:  ${f} (No matching project found in Supabase)`);
+    if (f === 'placeholder.jpg') return;
+    const isUsed = Array.from(foundMap.keys()).includes(f);
+    if (!isUsed) {
+      console.log(`⚠️ UNLINKED: ${f} (This file is in the folder but doesn't match any current project)`);
     }
   });
 
   if (missing > 0) {
-    console.log(`\n💡 Tip: Place new thumbnails in ${THUMB_DIR} and name them as shown above.`);
+    console.log(`\n💡 Note: I will only "Generate" missing images. Your existing images shown as "PROTECTED" will never be overwritten.`);
   } else {
-    console.log('\n✨ All projects have matching local thumbnails.');
+    console.log('\n✨ All projects have consistent visual identities. Everything is protected.');
   }
 }
 
