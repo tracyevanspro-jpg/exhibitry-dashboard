@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+.DS_Store
+*.js.map
+wrangler.toml
+check_*.js
+find_*.js
+search_*.js
