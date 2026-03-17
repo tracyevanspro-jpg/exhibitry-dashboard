@@ -44,16 +44,16 @@ export function card(p) {
   const localThumb = `./thumbnails/${kebabName}.jpg`;
   const prefixThumb = `./thumbnails/${prefixName}.jpg`;
   
-  // Clean name for Unsplash search keywords
-  const searchKeywords = p.name.replace(/[^a-zA-Z\s]/g, '').split(' ').slice(0, 3).join(',');
-  const unsplashUrl = `https://images.unsplash.com/featured/?exhibit,museum,${searchKeywords}`;
+  // Clean name for LoremFlickr search keywords
+  const searchKeywords = p.name.replace(/[^a-zA-Z\s]/g, '').split(' ').slice(0, 2).join(',');
+  const flickerUrl = `https://loremflickr.com/600/400/museum,exhibit,${searchKeywords || 'art'}`;
 
   return `
     <div class="card" onclick="this.classList.toggle('expanded')">
       ${hasNotesFlag ? `<a href="notes.html?project=${encodeURIComponent(p.name)}" class="badge badge-notes" onclick="event.stopPropagation()">NOTES</a>` : ''}
       <img src="${localThumb}" 
            class="card-image" 
-           onerror="if(this.src.includes('${kebabName}')){this.src='${prefixThumb}'} else if(this.src.includes('${prefixName}')){this.src='${unsplashUrl}'} else {this.src='./thumbnails/placeholder.jpg'; this.onerror=null;}">
+           onerror="if(this.src.includes('${kebabName}')){this.src='${prefixThumb}'} else if(this.src.includes('${prefixName}')){this.src='${flickerUrl}'} else {this.src='./thumbnails/placeholder.jpg'; this.onerror=null;}">
       <div class="card-top">
         <span class="card-name">${p.name}</span>
         ${badge(p.status)}
