@@ -29,7 +29,7 @@ export async function render() {
     const [projects, todos, emails, completedTodos, ideas] = await Promise.all([
       safeFetch(db.from('projects').select('name, status, next_action, notes').order('created_at', { ascending: false }), 'projects'),
       safeFetch(db.from('admin').select('id, task, due_date, status, notes').neq('status', 'complete').neq('status', 'Closed').order('due_date', { ascending: true, nullsFirst: false }), 'todos'),
-      safeFetch(db.from('inbox_log').select('name, context, source, created_at').order('created_at', { ascending: false }).limit(5), 'emails'),
+      safeFetch(db.from('inbox_log').select('entry_name, original_text, source, timestamp').order('timestamp', { ascending: false }).limit(5), 'emails'),
       safeFetch(db.from('admin').select('id, task, status, date_captured').eq('status', 'complete').order('date_captured', { ascending: false, nullsLast: true }).limit(5), 'completed'),
       safeFetch(db.from('ideas').select('tags').ilike('tags', '%meeting-notes%'), 'ideas')
     ]);
@@ -90,20 +90,20 @@ export async function render() {
         <div class="section-label">recent communications ${emails === null ? '(Error Loading)' : ''}</div>
         <div style="background:var(--card-bg); border:0.5px solid var(--border); border-radius:12px; padding:0.875rem 1rem; margin-bottom: 2rem;">
           ${emailsList.map(e => {
-            const date = new Date(e.created_at);
+            const date = new Date(e.timestamp);
             const isToday = date.toDateString() === today.toDateString();
             const timeStr = isToday ? date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : date.toLocaleDateString([], {month:'short', day:'numeric'});
             const extractEmail = (text) => { const match = text?.match(/<([^>]+)>/); return match ? match[1] : ''; };
-            const emailAddr = extractEmail(e.name) || '';
-            const mailto = emailAddr ? `href="mailto:${emailAddr}?subject=Re: ${e.name.replace(/<[^>]*>/g, '').trim()}"` : '';
+            const emailAddr = extractEmail(e.entry_name) || '';
+            const mailto = emailAddr ? `href="mailto:${emailAddr}?subject=Re: ${e.entry_name.replace(/<[^>]*>/g, '').trim()}"` : '';
             return `
             <div style="display:flex; flex-direction: column; gap:4px; padding:0.75rem 0; border-bottom:0.5px solid var(--divider);">
               <div style="display:flex; justify-content: space-between; align-items: center;">
-                <span style="font-size:13px; font-weight:600; color:var(--text);">${e.name}</span>
+                <span style="font-size:13px; font-weight:600; color:var(--text);">${e.entry_name}</span>
                 <span style="font-size:11px; color:var(--text-muted);">${timeStr}</span>
               </div>
               <div style="font-size:12px; color:var(--text-muted); line-height:1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                ${e.context || 'No message snippet available.'}
+                ${e.original_text || 'No message snippet available.'}
               </div>
               ${mailto ? `<a ${mailto} style="font-size: 11px; color: var(--blue-fg); text-decoration: none; align-self: flex-start; margin-top: 4px; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 9l-6 6 6 6"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg> Reply</a>` : ''}
             </div>`;
