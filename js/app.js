@@ -194,45 +194,9 @@ window.render = render;
 // 7. INITIALIZATION & EVENT LISTENERS
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    const overlay = document.getElementById('auth-overlay');
-    const content = document.getElementById('dashboard-content');
-    const passInput = document.getElementById('auth-password');
-    const errorEl = document.getElementById('auth-error');
-
-    // Super simple "Speedbump" password logic
-    // NOTE: This is obfuscated but not "secure" from a hacker. 
-    // It's a "Negative Friction" deterrent for the public URL.
-    const HASH = "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5"; // hash of '1234' (placeholder)
-    
-    // We'll use a better password from environment or just a shared secret
-    const SECRET = "exhibitry2024"; 
-
-    const unlock = () => {
-      overlay.style.opacity = '0';
-      setTimeout(() => {
-        overlay.style.display = 'none';
-        content.classList.add('visible');
-        render();
-        setInterval(render, 60000);
-      }, 300);
-    };
-
-    if (sessionStorage.getItem('exhibitry_auth') === 'true') {
-      unlock();
-    }
-
-    passInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        if (passInput.value === SECRET) {
-          sessionStorage.setItem('exhibitry_auth', 'true');
-          unlock();
-        } else {
-          errorEl.textContent = 'Incorrect password';
-          passInput.value = '';
-          passInput.style.borderColor = 'var(--red)';
-        }
-      }
-    });
+    // Protected by Cloudflare Access at the network level
+    render();
+    setInterval(render, 60000);
 
     if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
     document.getElementById('theme-toggle').addEventListener('click', () => {
