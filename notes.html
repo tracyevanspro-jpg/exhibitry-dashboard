@@ -14,7 +14,7 @@
     --card-bg: #fff;
     --border: #e0e0e0;
     --border-hover: #bbb;
-    --blue-fg: #185FA5;
+    --blue-fg: #185fa5;
     --divider: #f0f0f0;
   }
   body.dark-mode {
@@ -35,29 +35,28 @@
   .theme-toggle:hover { color: var(--text); }
   .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; margin-bottom: 1.5rem; transition: color 0.2s; }
   .back-link:hover { color: var(--text); }
-  h1 { font-size: 20px; font-weight: 600; margin-bottom: 0.25rem; line-height: 1.3;}
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 0.25rem; line-height: 1.3; }
   .subtitle { font-size: 13px; color: var(--text-muted); }
-  
   .note-card { background: var(--card-bg); border: 0.5px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; }
   .note-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; border-bottom: 0.5px solid var(--divider); padding-bottom: 0.75rem; }
-  .note-title { font-size: 15px; font-weight: 600;}
+  .note-title { font-size: 15px; font-weight: 600; }
   .note-date { font-size: 12px; color: var(--text-light); }
   .note-body { font-size: 14px; white-space: pre-wrap; }
-  
   .add-note-section { margin-top: 3rem; border-top: 0.5px solid var(--divider); padding-top: 2rem; }
   .add-note-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 1rem; display: block; }
-  .input-title { width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); font-size: 14px; outline: none; transition: border-color 0.2s; margin-bottom: 0.5rem; font-family: inherit;}
-  .input-body { width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); font-size: 13px; outline: none; transition: border-color 0.2s; margin-bottom: 1rem; min-height: 120px; resize: vertical; font-family: inherit;}
+  .input-title { width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); font-size: 14px; outline: none; transition: border-color 0.2s; margin-bottom: 0.5rem; font-family: inherit; }
+  .input-body { width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); font-size: 13px; outline: none; transition: border-color 0.2s; margin-bottom: 1rem; min-height: 120px; resize: vertical; font-family: inherit; }
   .input-title:focus, .input-body:focus { border-color: var(--border-hover); }
   .btn-submit { padding: 0.75rem 1.5rem; border-radius: 8px; border: none; background: var(--text); color: var(--bg); font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity 0.2s; }
   .btn-submit:hover { opacity: 0.9; }
   .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
   .loading { text-align: center; padding: 3rem; color: var(--text-light); font-size: 14px; }
+  .inline-link { color: var(--blue-fg); text-decoration: underline; }
 </style>
 </head>
 <body>
 
-<a href="dashboard.html" class="back-link">
+<a href="./index.html" class="back-link">
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
   Back to Dashboard
 </a>
@@ -77,125 +76,14 @@
 </div>
 
 <div class="add-note-section">
-  <label class="add-note-label">Add New Note</label>
-  <form id="add-note-form" onsubmit="handleAddNote(event)">
+  <label class="add-note-label" for="note-title">Add New Note</label>
+  <form id="add-note-form">
     <input type="text" id="note-title" class="input-title" placeholder="Note Title (e.g. Client Kickoff Call)" required autocomplete="off">
     <textarea id="note-body" class="input-body" placeholder="Enter notes here. You can use **bold** or bullet points." required></textarea>
     <button type="submit" id="btn-submit" class="btn-submit">Save Note</button>
   </form>
 </div>
 
-<script>
-const urlParams = new URLSearchParams(window.location.search);
-const projectName = urlParams.get('project');
-
-if (!projectName) {
-  document.getElementById('project-title').textContent = "No Project Selected";
-  document.getElementById('notes-container').innerHTML = `<div style="color:var(--text-muted); font-size:14px;">Please access notes from a specific project card on the dashboard.</div>`;
-} else {
-  document.getElementById('project-title').textContent = projectName;
-}
-
-const SUPABASE_URL = 'https://jrgfbfxzrpzfscguicwi.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZ2ZiZnh6cnB6ZnNjZ3VpY3dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1ODUwNDEsImV4cCI6MjA4OTE2MTA0MX0.VTOenW3GEUaMML55NxB7TEXlpDfrx2YnQescbbR0WAk';
-
-const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-function formatMarkdown(text) {
-  if (!text) return '';
-  return text
-    .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:var(--blue-fg); text-decoration:underline;">$1</a>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^-\s/gm, '&bull; ')
-    .replace(/\n/g, '<br>');
-}
-
-async function render() {
-  if (!projectName) return;
-  
-  try {
-    const { data: notes, error } = await db.from('ideas')
-      .select('title, notes, created_at')
-      .ilike('tags', `%${projectName}%`)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    const container = document.getElementById('notes-container');
-    if (!notes || notes.length === 0) {
-      container.innerHTML = `<div style="color:var(--text-muted); font-size:14px; padding: 2rem 0;">No notes found for this project. Use the form below to add one.</div>`;
-      return;
-    }
-
-    container.innerHTML = notes.map(n => {
-      const date = new Date(n.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-      return `
-        <div class="note-card">
-          <div class="note-header">
-            <div class="note-title">${n.title || 'Untitled Note'}</div>
-            <div class="note-date">${date}</div>
-          </div>
-          <div class="note-body">${formatMarkdown(n.notes)}</div>
-        </div>
-      `;
-    }).join('');
-  } catch(e) {
-    document.getElementById('notes-container').innerHTML = `<div style="color:var(--text-muted); font-size:14px;">Error loading notes: ${e.message}</div>`;
-  }
-}
-
-async function handleAddNote(e) {
-  e.preventDefault();
-  if (!projectName) return;
-  
-  const titleInput = document.getElementById('note-title');
-  const bodyInput = document.getElementById('note-body');
-  const btn = document.getElementById('btn-submit');
-  
-  const title = titleInput.value.trim();
-  const body = bodyInput.value.trim();
-  if (!title || !body) return;
-
-  titleInput.disabled = true;
-  bodyInput.disabled = true;
-  btn.disabled = true;
-  btn.textContent = "Saving...";
-
-  try {
-    const { error } = await db.from('ideas').insert([{ 
-      title: title, 
-      notes: body, 
-      tags: [projectName, "meeting-notes"],
-      source: "dashboard"
-    }]);
-    
-    if (!error) {
-      titleInput.value = '';
-      bodyInput.value = '';
-      await render();
-    } else {
-      console.error(error);
-      alert('Failed to save note. See console.');
-    }
-  } catch (err) {
-    console.error(err);
-  } finally {
-    titleInput.disabled = false;
-    bodyInput.disabled = false;
-    btn.disabled = false;
-    btn.textContent = "Save Note";
-  }
-}
-
-if (projectName) render();
-
-// Dark mode logic
-if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
-document.getElementById('theme-toggle').addEventListener('click', () => {
-  document.body.classList.toggle('dark-mode');
-  localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
-});
-</script>
+<script type="module" src="./js/notes.js"></script>
 </body>
 </html>

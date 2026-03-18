@@ -48,18 +48,21 @@ h1 { font-size: 18px; font-weight: 500; margin-bottom: 0.25rem; }
 .stat-value { font-size: 24px; font-weight: 500; }
 .stat-value.red { color: var(--red); }
 .stat-value.amber { color: var(--amber); }
-.grid { display: grid; gap: 10px; }
+.grid { display: grid; gap: 10px; align-items: start; }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
-.card { position: relative; background: var(--card-bg); border: 0.5px solid var(--border); border-radius: 12px; padding: 0.875rem 1rem; cursor: pointer; transition: border-color 0.15s, background 0.2s; overflow: hidden; display: flex; flex-direction: column; }
+.card { position: relative; background: var(--card-bg); border: 0.5px solid var(--border); border-radius: 12px; padding: 0.875rem 1rem; transition: border-color 0.15s, background 0.2s; overflow: hidden; display: flex; flex-direction: column; }
+.card.expandable { cursor: pointer; }
 .card:hover { border-color: var(--border-hover); }
 .card-image { width: calc(100% + 2rem); margin: -0.875rem -1rem 0.875rem -1rem; height: 160px; object-fit: cover; object-position: center 15%; border-bottom: 0.5px solid var(--border); display: block; flex-shrink: 0; }
 .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
 .card-name { font-size: 13px; font-weight: 500; line-height: 1.4; color: var(--text); }
 .card-notes { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 0.5px solid var(--divider); display: none; white-space: pre-wrap; }
 .card.expanded .card-notes { display: block; }
+.card.expanded .expand-hint { display: none !important; }
 .notes-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--blue-fg); text-decoration: none; padding-top: 0.5rem; margin-top: 0.5rem; border-top: 0.5px dashed var(--divider); width: 100%; transition: opacity 0.2s; }
 .notes-link:hover { opacity: 0.8; }
+.inline-link { color: var(--blue-fg); text-decoration: underline; }
 .badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
 .badge-red { background: var(--red-bg); color: var(--red-fg); }
 .badge-amber { background: var(--amber-bg); color: var(--amber-fg); }
@@ -71,7 +74,7 @@ h1 { font-size: 18px; font-weight: 500; margin-bottom: 0.25rem; }
 .card-action { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
 .task-row { display: flex; align-items: flex-start; gap: 10px; padding: 0.5rem 0; border-bottom: 0.5px solid var(--divider); transition: opacity 0.2s; }
 .task-row.completing { opacity: 0.4; pointer-events: none; }
-.task-checkbox { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--border-hover); flex-shrink: 0; margin-top: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.task-checkbox { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--border-hover); flex-shrink: 0; margin-top: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; padding: 0; background: transparent; appearance: none; -webkit-appearance: none; }
 .task-checkbox:hover { border-color: var(--text-light); }
 .task-checkbox svg { opacity: 0; width: 10px; height: 10px; stroke: var(--bg); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .task-checkbox.done { background: var(--green-fg); border-color: var(--green-fg); }

@@ -1,3 +1,5 @@
+import { escapeAttribute, escapeHtml, formatRichText } from './utils.js';
+
 // ==========================================
 // 3. UI COMPONENT GENERATORS
 // ==========================================
@@ -16,19 +18,11 @@ export const STATUS_BADGE = {
 
 export function badge(status) {
   const [cls, label] = STATUS_BADGE[status] || ['badge-gray', status];
-  return `<span class="badge ${cls}">${label}</span>`;
+  return `<span class="badge ${cls}">${escapeHtml(label)}</span>`;
 }
 
 export function card(p) {
-  let formattedNotes = p.notes || '';
-  if (formattedNotes) {
-    formattedNotes = formattedNotes
-      .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color:var(--blue-fg); text-decoration:underline;">$1</a>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/^-\s/gm, '&bull; ')
-      .replace(/\n/g, '<br>');
-  }
-  
+  const formattedNotes = p.notes ? formatRichText(p.notes) : '';
   const hasNotesFlag = p.hasMeetingNotes;
   
   // Thumbnail logic: check for .jpg matching project name (kebab-case)
@@ -47,19 +41,28 @@ export function card(p) {
   // Clean name for LoremFlickr search keywords
   const searchKeywords = p.name.replace(/[^a-zA-Z\s]/g, '').split(' ').slice(0, 2).join(',');
   const flickerUrl = `https://loremflickr.com/600/400/museum,exhibit,${searchKeywords || 'art'}`;
+  const projectName = escapeHtml(p.name || '');
+  const projectLink = `notes.html?project=${encodeURIComponent(p.name || '')}`;
+  const nextAction = escapeHtml(p.next_action || '');
 
   return `
-    <div class="card" onclick="this.classList.toggle('expanded')">
-      ${hasNotesFlag ? `<a href="notes.html?project=${encodeURIComponent(p.name)}" class="badge badge-notes" onclick="event.stopPropagation()">NOTES</a>` : ''}
+    <div class="card ${formattedNotes ? 'expandable' : ''}" ${formattedNotes ? 'data-expandable="true"' : ''}>
+      ${hasNotesFlag ? `<a href="${escapeAttribute(projectLink)}" class="badge badge-notes" data-card-link="true">NOTES</a>` : ''}
       <img src="${localThumb}" 
-           class="card-image" 
-           onerror="if(this.src.includes('${kebabName}')){this.src='${prefixThumb}'} else if(this.src.includes('${prefixName}')){this.src='${flickerUrl}'} else {this.src='./thumbnails/placeholder.jpg'; this.onerror=null;}">
+           class="card-image"
+           data-thumb-primary="${escapeAttribute(localThumb)}"
+           data-thumb-secondary="${escapeAttribute(prefixThumb)}"
+           data-thumb-fallback="${escapeAttribute(flickerUrl)}"
+           data-thumb-placeholder="./thumbnails/placeholder.jpg">
       <div class="card-top">
-        <span class="card-name">${p.name}</span>
+        <span class="card-name">${projectName}</span>
         ${badge(p.status)}
       </div>
-      <div class="card-action">${p.next_action || ''}</div>
-      ${formattedNotes ? `<div class="card-notes">${formattedNotes}</div>` : ''}
+      <div class="card-action">
+        ${nextAction}
+        ${formattedNotes ? `<span class="expand-hint" style="display: block; margin-top: 4px; font-size: 10px; color: var(--blue-fg); font-weight: 600;">+ Show Notes</span>` : ''}
+      </div>
+      ${formattedNotes ? `<div class="card-notes" data-card-link="true">${formattedNotes}</div>` : ''}
     </div>`;
 }
 

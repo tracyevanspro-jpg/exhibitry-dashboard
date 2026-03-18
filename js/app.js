@@ -1,6 +1,8 @@
 import { db } from './config.js';
 import { card, todoBadge, todoLabel } from './components.js';
-import { setRenderCallback } from './actions.js';
+import { handleAddTask, markTaskComplete, setRenderCallback } from './actions.js';
+import { buildMailtoHref, escapeAttribute, escapeHtml } from './utils.js';
+import pkg from '../package.json';
 
 // Pass the render function to the actions module so it can refresh the UI after updates
 setRenderCallback(render);
@@ -13,6 +15,9 @@ export async function render() {
   try {
     // Show partial loading state if we already have some data
     const lastSyncEl = document.getElementById('last-updated');
+    
+    // Capture currently expanded cards to preserve state across refreshes
+    const expandedCards = Array.from(document.querySelectorAll('.card.expanded .card-name')).map(el => el.textContent);
     
     // Fail-safe fetch helper
     const safeFetch = async (query, label) => {
@@ -95,17 +100,20 @@ export async function render() {
             const timeStr = isToday ? date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : date.toLocaleDateString([], {month:'short', day:'numeric'});
             const extractEmail = (text) => { const match = text?.match(/<([^>]+)>/); return match ? match[1] : ''; };
             const emailAddr = extractEmail(e.entry_name) || '';
-            const mailto = emailAddr ? `href="mailto:${emailAddr}?subject=Re: ${e.entry_name.replace(/<[^>]*>/g, '').trim()}"` : '';
+            const safeEntryName = escapeHtml(e.entry_name || '');
+            const safeOriginalText = escapeHtml(e.original_text || 'No message snippet available.');
+            const safeTime = escapeHtml(timeStr);
+            const mailtoHref = buildMailtoHref(emailAddr, `Re: ${(e.entry_name || '').replace(/<[^>]*>/g, '').trim()}`);
             return `
             <div style="display:flex; flex-direction: column; gap:4px; padding:0.75rem 0; border-bottom:0.5px solid var(--divider);">
               <div style="display:flex; justify-content: space-between; align-items: center;">
-                <span style="font-size:13px; font-weight:600; color:var(--text);">${e.entry_name}</span>
-                <span style="font-size:11px; color:var(--text-muted);">${timeStr}</span>
+                <span style="font-size:13px; font-weight:600; color:var(--text);">${safeEntryName}</span>
+                <span style="font-size:11px; color:var(--text-muted);">${safeTime}</span>
               </div>
               <div style="font-size:12px; color:var(--text-muted); line-height:1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                ${e.original_text || 'No message snippet available.'}
+                ${safeOriginalText}
               </div>
-              ${mailto ? `<a ${mailto} style="font-size: 11px; color: var(--blue-fg); text-decoration: none; align-self: flex-start; margin-top: 4px; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 9l-6 6 6 6"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg> Reply</a>` : ''}
+              ${mailtoHref ? `<a href="${escapeAttribute(mailtoHref)}" style="font-size: 11px; color: var(--blue-fg); text-decoration: none; align-self: flex-start; margin-top: 4px; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 9l-6 6 6 6"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg> Reply</a>` : ''}
             </div>`;
           }).join('')}
         </div>`;
@@ -128,13 +136,13 @@ export async function render() {
         <div style="background:var(--card-bg); border:0.5px solid var(--border); border-radius:12px; padding:0.875rem 1rem;">
           ${urgentTodos.map(t => `
             <div class="task-row">
-              <div class="task-checkbox" onclick="markTaskComplete('${t.id}', this)">
+              <button type="button" class="task-checkbox" data-task-complete="${escapeAttribute(t.id)}" aria-label="Mark task complete">
                  <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
-              </div>
+              </button>
               <div style="display:flex; flex-direction: column; flex-grow: 1;">
                  <div style="display: flex; gap: 8px; align-items: flex-start;">
                    <span class="badge ${todoBadge(t.due_date)}" style="margin-top:1px; flex-shrink:0;">${todoLabel(t.due_date)}</span>
-                   <span style="font-size:13px; color:var(--text); line-height:1.5;">${t.task}</span>
+                   <span style="font-size:13px; color:var(--text); line-height:1.5;">${escapeHtml(t.task || '')}</span>
                  </div>
               </div>
             </div>`).join('')}
@@ -147,10 +155,10 @@ export async function render() {
         <div style="background:var(--card-bg); border:0.5px solid var(--border); border-radius:12px; padding:0.875rem 1rem;">
           ${openTodos.map(t => `
             <div class="task-row">
-              <div class="task-checkbox" onclick="markTaskComplete('${t.id}', this)">
+              <button type="button" class="task-checkbox" data-task-complete="${escapeAttribute(t.id)}" aria-label="Mark task complete">
                  <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
-              </div>
-              <span style="font-size:13px; color:var(--text); line-height:1.5; margin-top:1px;">${t.task}</span>
+              </button>
+              <span style="font-size:13px; color:var(--text); line-height:1.5; margin-top:1px;">${escapeHtml(t.task || '')}</span>
             </div>`).join('')}
         </div>`;
     }
@@ -164,25 +172,34 @@ export async function render() {
               <div class="task-checkbox done" style="opacity: 0.6; pointer-events:none;">
                  <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
               </div>
-              <span style="font-size:13px; color:var(--text); line-height:1.5; text-decoration:line-through;">${t.task}</span>
+              <span style="font-size:13px; color:var(--text); line-height:1.5; text-decoration:line-through;">${escapeHtml(t.task || '')}</span>
             </div>`).join('')}
         </div>`;
     }
 
     html += `
       <div class="section-label" style="margin-top: 2rem;">add quick task</div>
-      <form class="add-task-form" onsubmit="handleAddTask(event)">
+      <form class="add-task-form" id="add-task-form">
         <input type="text" id="new-task-input" class="add-task-input" placeholder="What needs to be done?" required autocomplete="off">
         <button type="submit" id="new-task-btn" class="add-task-btn">Add Task</button>
       </form>`;
     
     dashboard.innerHTML = html;
+
+    // Restore expanded state
+    const newCards = document.querySelectorAll('.card.expandable');
+    newCards.forEach(card => {
+      const nameEl = card.querySelector('.card-name');
+      if (nameEl && expandedCards.includes(nameEl.textContent)) {
+        card.classList.add('expanded');
+      }
+    });
   } catch(e) {
     console.error(e);
     dashboard.innerHTML = `
       <div class="error">
         <strong>Error connecting to Brain:</strong> ${e.message}<br><br>
-        <button onclick="window.render()" style="background: var(--red-fg); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Try Again</button>
+        <button type="button" data-dashboard-retry="true" style="background: var(--red-fg); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">Try Again</button>
       </div>`;
   }
 }
@@ -194,6 +211,10 @@ window.render = render;
 // 7. INITIALIZATION & EVENT LISTENERS
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
+    // Display app version from package.json
+    const versionEl = document.getElementById('app-version');
+    if (versionEl) versionEl.textContent = `v${pkg.version}`;
+
     // Protected by Cloudflare Access at the network level
     render();
     setInterval(render, 60000);
@@ -202,5 +223,61 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('theme-toggle').addEventListener('click', () => {
       document.body.classList.toggle('dark-mode');
       localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+    });
+
+    const dashboard = document.getElementById('dashboard');
+
+    dashboard.addEventListener('click', (event) => {
+      const completeButton = event.target.closest('[data-task-complete]');
+      if (completeButton) {
+        markTaskComplete(completeButton.dataset.taskComplete, completeButton);
+        return;
+      }
+
+      const retryButton = event.target.closest('[data-dashboard-retry]');
+      if (retryButton) {
+        render();
+        return;
+      }
+
+      const interactiveChild = event.target.closest('[data-card-link="true"]');
+      if (interactiveChild) return;
+
+      const expandableCard = event.target.closest('.card.expandable');
+      if (expandableCard) {
+        expandableCard.classList.toggle('expanded');
+      }
+    });
+
+    dashboard.addEventListener(
+      'error',
+      (event) => {
+        const image = event.target;
+        if (!(image instanceof HTMLImageElement) || !image.matches('.card-image')) return;
+
+        const { thumbSecondary, thumbFallback, thumbPlaceholder } = image.dataset;
+
+        if (!image.dataset.thumbStage) {
+          image.dataset.thumbStage = 'secondary';
+          image.src = thumbSecondary || thumbPlaceholder || image.src;
+          return;
+        }
+
+        if (image.dataset.thumbStage === 'secondary') {
+          image.dataset.thumbStage = 'fallback';
+          image.src = thumbFallback || thumbPlaceholder || image.src;
+          return;
+        }
+
+        image.dataset.thumbStage = 'placeholder';
+        image.src = thumbPlaceholder || image.src;
+      },
+      true
+    );
+
+    dashboard.addEventListener('submit', (event) => {
+      if (event.target.matches('#add-task-form')) {
+        handleAddTask(event);
+      }
     });
 });
